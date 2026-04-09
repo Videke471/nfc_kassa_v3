@@ -47,24 +47,24 @@ Deze backend ondersteunt een aparte pc via HTTP API. Een Express-app kan hierop 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --reload
 ```
 
 ### Windows PowerShell
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --reload
 ```
 
 ### Windows CMD
 ```bat
 py -m venv .venv
 .venv\Scripts\activate.bat
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --reload
 ```
 
 Open daarna: `http://127.0.0.1:8000`
