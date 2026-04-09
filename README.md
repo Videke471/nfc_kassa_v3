@@ -95,3 +95,29 @@ Windows (PowerShell/CMD):
 ```powershell
 python -m pytest -q
 ```
+
+
+## Troubleshooting (Windows)
+Als je bij `uvicorn app.main:app --reload` deze fout krijgt:
+`ModuleNotFoundError: No module named 'fastapi'`, gebruik dan exact dit:
+
+```powershell
+# 1) check Python versie (aanbevolen: 3.11 of 3.12)
+python --version
+
+# 2) activeer virtualenv opnieuw
+.\.venv\Scripts\Activate.ps1
+
+# 3) installeer dependencies met dezelfde interpreter
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
+# 4) controleer of fastapi echt in deze venv zit
+python -m pip show fastapi
+
+# 5) start uvicorn via python -m (zelfde interpreter)
+python -m uvicorn app.main:app --reload
+```
+
+> Belangrijk: Python 3.14 kan sneller compatibiliteitsproblemen geven bij sommige packages. 
+> Als installatie blijft falen, gebruik Python 3.12 en maak de venv opnieuw aan.
