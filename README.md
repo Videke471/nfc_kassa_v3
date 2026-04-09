@@ -1,6 +1,6 @@
 # NFC Kassa V3
 
-Deze versie is een uitgebreidere functionele basis voor je gevraagde flow:
+Deze versie is een uitgebreidere functionele basis voor je gevraagde flow.
 
 ## Gebruikersflow
 - Login via **NFC kaart** (`/api/auth/login/card`) of **QR code** (`/api/auth/login/qr`).
@@ -41,7 +41,9 @@ Deze versie is een uitgebreidere functionele basis voor je gevraagde flow:
 ## Externe bar-pc (Express/Barmanscherm)
 Deze backend ondersteunt een aparte pc via HTTP API. Een Express-app kan hierop aansluiten voor live orderoverzicht en bar-readonly functies (openstaand saldo, user verbruik).
 
-## Starten
+## Installatie & opstarten
+
+### Linux/macOS (bash/zsh)
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -49,14 +51,47 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+### Windows PowerShell
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+### Windows CMD
+```bat
+py -m venv .venv
+.venv\Scripts\activate.bat
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
 Open daarna: `http://127.0.0.1:8000`
 
 ## Mock scan
+Linux/macOS:
 ```bash
 export MOCK_NFC_UID=04AABBCCDD
 ```
 
+Windows PowerShell:
+```powershell
+$env:MOCK_NFC_UID = "04AABBCCDD"
+```
+
+Windows CMD:
+```bat
+set MOCK_NFC_UID=04AABBCCDD
+```
+
 ## Testen
+Linux/macOS:
 ```bash
 pytest -q
+```
+
+Windows (PowerShell/CMD):
+```powershell
+python -m pytest -q
 ```
