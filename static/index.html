@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NFC Kassa V3</title>
+    <style>
+      body { font-family: Inter, Arial, sans-serif; max-width: 980px; margin: 2rem auto; padding: 0 1rem; }
+      .card { border: 1px solid #ddd; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+      button { padding: 0.55rem .9rem; border: 0; border-radius: 8px; background: #0d6efd; color: white; cursor: pointer; margin-right: .4rem; }
+      button.secondary { background: #6c757d; }
+      input { padding: 0.5rem; width: 100%; margin-bottom: 0.5rem; }
+      .item-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
+      .muted { color: #666; }
+      pre { background: #f8f9fa; padding: .75rem; border-radius: 8px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    </style>
+  </head>
+  <body>
+    <h1>NFC Kassa V3</h1>
+    <p class="muted">User flow: login (NFC of QR) → winkelmandje → bestelling → betalen/annuleren.</p>
+
+    <section class="card">
+      <h2>Login</h2>
+      <button id="scanBtn">Scan NFC (ACR122U/mock)</button>
+      <input id="uidInput" placeholder="NFC UID (bv. 04AABBCCDD)" />
+      <button id="uidBtn">Login met kaart UID</button>
+      <input id="qrInput" placeholder="QR code" />
+      <button id="qrBtn">Login met QR</button>
+      <p id="sessionInfo"></p>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Bestelscherm</h2>
+        <button id="refreshItemsBtn" class="secondary">Ververs items</button>
+        <div id="items"></div>
+      </section>
+
+      <section class="card">
+        <h2>Winkelmandje</h2>
+        <button id="cartRefreshBtn" class="secondary">Bekijk mandje</button>
+        <button id="cartClearBtn" class="secondary">Leegmaken</button>
+        <pre id="cart"></pre>
+        <button id="createOrderBtn">Bestelling plaatsen</button>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Orders</h2>
+      <button id="ordersBtn" class="secondary">Mijn bestellingen</button>
+      <pre id="orders"></pre>
+      <input id="orderIdInput" placeholder="Order ID" />
+      <button id="payBtn">Betaal order</button>
+      <button id="cancelBtn" class="secondary">Annuleer order</button>
+    </section>
+
+    <section class="card">
+      <h2>Status</h2>
+      <pre id="status"></pre>
+    </section>
+
+    <script>
+      let sessionToken = null;
+
+      const statusEl = document.getElementById("status");
+      const cartEl = document.getElementById("cart");
+      const ordersEl = document.getElementById("orders");
+      const sessionInfo = document.getElementById("sessionInfo");
+
+      function setStatus(data) { statusEl.textContent = JSON.stringify(data, null, 2); }
+      function api(path, options = {}) { return fetch(path, options).then(async (r) => ({ ok: r.ok, data: await r.json() })); }
+
+      async function updateProfile() {
+        if (!sessionToken) return;
+        const result = await api(`/api/user/me?session_token=${encodeURIComponent(sessionToken)}`);
+        if (result.ok) {
+          sessionInfo.textContent = `Ingelogd: ${result.data.nickname} | saldo €${result.data.balance} | verbruikt €${result.data.consumed_total}`;
+        }
+      }
+
+      async function loadItems() {
+        const result = await api("/api/items");
+        const container = document.getElementById("items");
+        container.innerHTML = "";
+        result.data.forEach((item) => {
+          const row = document.createElement("div");
+          row.className = "item-row";
+          row.innerHTML = `<span>${item.name} (€${item.price}) ${item.is_sold_out ? "- UITVERKOCHT" : ""}</span>`;
+          const btn = document.createElement("button");
+          btn.textContent = "+ in mandje";
+          btn.disabled = item.is_sold_out;
+          btn.onclick = async () => {
+            if (!sessionToken) return setStatus({ error: "Eerst inloggen" });
+            const add = await api("/api/cart/items", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ session_token: sessionToken, item_id: item.id, quantity: 1 }),
+            });
+            setStatus(add.data);
+            await loadCart();
+          };
+          row.appendChild(btn);
+          container.appendChild(row);
+        });
+      }
+
+      async function loadCart() {
+        if (!sessionToken) return;
+        const result = await api(`/api/cart?session_token=${encodeURIComponent(sessionToken)}`);
+        cartEl.textContent = JSON.stringify(result.data, null, 2);
+      }
+
+      async function loadOrders() {
+        if (!sessionToken) return;
+        const result = await api(`/api/orders/mine?session_token=${encodeURIComponent(sessionToken)}`);
+        ordersEl.textContent = JSON.stringify(result.data, null, 2);
+      }
+
+      document.getElementById("scanBtn").onclick = async () => {
+        const result = await api("/api/auth/login/scan", { method: "POST" });
+        setStatus(result.data);
+        if (result.ok) {
+          sessionToken = result.data.session_token;
+          await updateProfile();
+        }
+      };
+
+      document.getElementById("uidBtn").onclick = async () => {
+        const uid = document.getElementById("uidInput").value;
+        const result = await api("/api/auth/login/card", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ uid })
+        });
+        setStatus(result.data);
+        if (result.ok) { sessionToken = result.data.session_token; await updateProfile(); }
+      };
+
+      document.getElementById("qrBtn").onclick = async () => {
+        const qr_code = document.getElementById("qrInput").value;
+        const result = await api("/api/auth/login/qr", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ qr_code })
+        });
+        setStatus(result.data);
+        if (result.ok) { sessionToken = result.data.session_token; await updateProfile(); }
+      };
+
+      document.getElementById("createOrderBtn").onclick = async () => {
+        if (!sessionToken) return setStatus({ error: "Eerst inloggen" });
+        const result = await api("/api/orders/from-cart", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_token: sessionToken })
+        });
+        setStatus(result.data);
+        await loadCart();
+        await loadOrders();
+      };
+
+      document.getElementById("payBtn").onclick = async () => {
+        const orderId = document.getElementById("orderIdInput").value;
+        const result = await api(`/api/orders/${orderId}/pay`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_token: sessionToken })
+        });
+        setStatus(result.data);
+        await updateProfile();
+        await loadOrders();
+      };
+
+      document.getElementById("cancelBtn").onclick = async () => {
+        const orderId = document.getElementById("orderIdInput").value;
+        const result = await api(`/api/orders/${orderId}/cancel`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_token: sessionToken })
+        });
+        setStatus(result.data);
+        await loadOrders();
+      };
+
+      document.getElementById("ordersBtn").onclick = loadOrders;
+      document.getElementById("refreshItemsBtn").onclick = loadItems;
+      document.getElementById("cartRefreshBtn").onclick = loadCart;
+
+      document.getElementById("cartClearBtn").onclick = async () => {
+        const result = await api("/api/cart/clear", {
+          method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_token: sessionToken })
+        });
+        setStatus(result.data);
+        await loadCart();
+      };
+
+      loadItems();
+    </script>
+  </body>
+</html>
