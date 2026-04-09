@@ -41,6 +41,10 @@ Deze versie is een uitgebreidere functionele basis voor je gevraagde flow.
 ## Externe bar-pc (Express/Barmanscherm)
 Deze backend ondersteunt een aparte pc via HTTP API. Een Express-app kan hierop aansluiten voor live orderoverzicht en bar-readonly functies (openstaand saldo, user verbruik).
 
+## Vereiste Python versie
+- **Aanbevolen:** Python **3.12** (of 3.13).
+- Python **3.14** geeft momenteel installatiefouten op `pydantic-core` (PyO3 limiet), waardoor `fastapi/uvicorn` niet correct worden geïnstalleerd.
+
 ## Installatie & opstarten
 
 ### Linux/macOS (bash/zsh)
@@ -83,6 +87,11 @@ $env:MOCK_NFC_UID = "04AABBCCDD"
 Windows CMD:
 ```bat
 set MOCK_NFC_UID=04AABBCCDD
+```
+
+## Snelle Windows bootstrap
+```powershell
+.\scripts_bootstrap_windows.ps1
 ```
 
 ## Testen
